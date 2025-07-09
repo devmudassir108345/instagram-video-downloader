@@ -1,0 +1,58 @@
+:root {
+  /* 🌈 Brand Colors */
+  --color-primary: #0088cc; /* Main brand color (blue) */
+  --color-secondary: #8e54e9; /* Secondary brand color (purple) */
+
+  /* 🔸 Accent Colors */
+  --color-accent-green: #00be63;
+  --color-accent-orange: #ff4500;
+  --color-accent-red: #cb2027;
+  --color-accent-yellow: #f5eaaf;
+
+  /* 🖤 Neutral Palette */
+  --color-bg-white: #ffffff;
+  --color-bg-light: #f8f9fa;
+  --color-bg-lighter: #eaecf3;
+  --color-bg-gray: #cccccc;
+  --color-black: #000000;
+
+  /* ✏️ Text Colors */
+  --text-primary: #252638; /* Dark navy – main text */
+  --text-secondary: #555555; /* Medium gray – secondary text */
+  --text-body: #4a4a4a; /* Standard body text */
+  --text-inverse: #ffffff; /* For dark backgrounds */
+
+  /* 🧱 Border Colors */
+  --border-light: #d4d4d4;
+  --border-soft: #e1e1e1;
+  --border-accent: #0088cc;
+
+  /* 🎨 Fill Color */
+  --fill-primary: #0088cc;
+
+  --max-width: 1140px;
+  --margin-auto: 0 auto;
+}
+
+
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+body {
+  font-family: "Roboto", sans-serif, Arial, Helvetica, sans-serif;
+  /* background: linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%); */
+  min-height: 100vh;
+  color: #333;
+  line-height: 1.6;
+}
+
+
+
+.container {
+  max-width: var(--max-width);
+  margin: var(--margin-auto);
+  padding: 20px;
+}
