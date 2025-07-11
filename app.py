@@ -2,7 +2,7 @@
 import os
 import yt_dlp
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
-from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
+from fastapi.responses import JSONResponse, StreamingResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,7 +17,11 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, Optional
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
+import tempfile
+import shutil
+from fastapi.responses import StreamingResponse
+from datetime import timedelta
 
 # Pydantic models
 class URLRequest(BaseModel):
@@ -29,7 +33,7 @@ class DownloadRequest(BaseModel):
     session_id: str
     format_id: str = None
 
-app = FastAPI(title="Instagram Downloader API - Complete Fix")
+app = FastAPI(title="Instagram Downloader API - High Quality & Auto Cleanup")
 
 # Add CORS middleware
 app.add_middleware(
@@ -43,21 +47,25 @@ app.add_middleware(
 # Setup templates and static files
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/images", StaticFiles(directory="images"), name="images")
 
 def sanitize_title(title):
     return re.sub(r'[\\/*?:"<>|]', "_", title)
 
 # Create directories
-os.makedirs('uploads', exist_ok=True)
-os.makedirs('outputs', exist_ok=True)
 os.makedirs('static', exist_ok=True)
 os.makedirs('templates', exist_ok=True)
+os.makedirs('output', exist_ok=True)
 
 # Global variables
 video_cache = {}
 download_jobs: Dict[str, Dict[str, Any]] = {}
 job_lock = threading.Lock()
 executor = ThreadPoolExecutor(max_workers=15)
+
+# Cleanup tracking
+temp_files = {}
+temp_files_lock = threading.Lock()
 
 class InstagramDownloader:
     def __init__(self):
@@ -69,10 +77,11 @@ class InstagramDownloader:
             'writesubtitles': False,
             'writeautomaticsub': False,
             'socket_timeout': 30,
-            'retries': 2,
+            'retries': 3,
             'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         }
         
+        # ✅ OPTIMIZED FOR HIGHEST QUALITY
         self.download_opts = {
             'quiet': True,
             'no_warnings': True,
@@ -80,8 +89,11 @@ class InstagramDownloader:
             'writesubtitles': False,
             'writeautomaticsub': False,
             'socket_timeout': 60,
-            'retries': 3,
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'retries': 5,  # Increased retries
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            # ✅ FORCE HIGHEST QUALITY FORMATS
+            'format_sort': ['res:1080', 'fps', 'hdr:12', 'codec:h264', 'size', 'br', 'asr'],
+            'format_sort_force': True,
         }
 
     def is_valid_instagram_url(self, url):
@@ -167,25 +179,9 @@ class InstagramDownloader:
                 'error_type': 'unexpected_error'
             }
 
-    def get_unique_filename(self, base_path, title, ext):
-        """Generate unique filename"""
-        safe_title = sanitize_title(title)
-        base_filename = f"{safe_title}.{ext}"
-        full_path = os.path.join(base_path, base_filename)
-        
-        if not os.path.exists(full_path):
-            return base_filename
-        
-        counter = 1
-        while True:
-            new_filename = f"{safe_title}_{counter}.{ext}"
-            new_full_path = os.path.join(base_path, new_filename)
-            if not os.path.exists(new_full_path):
-                return new_filename
-            counter += 1
-
-    def download_video(self, url, format_id, job_id, content_type=None):
-        """Download video"""
+    def download_video_to_temp(self, url, format_id, job_id, content_type=None):
+        """Download video to temporary location with auto-cleanup"""
+        temp_dir = None
         try:
             if content_type == 'story':
                 with job_lock:
@@ -194,38 +190,47 @@ class InstagramDownloader:
                             'status': 'failed',
                             'error': 'Stories cannot be downloaded'
                         })
-                return
+                return None
             
             with job_lock:
                 if job_id in download_jobs:
                     download_jobs[job_id]['status'] = 'downloading'
                     download_jobs[job_id]['progress'] = 5
 
+            # ✅ CREATE TEMPORARY DIRECTORY
+            temp_dir = tempfile.mkdtemp(prefix='instagram_dl_')
             unique_id = str(uuid.uuid4())[:8]
             download_opts = self.download_opts.copy()
-            
+                    
             if format_id == 'audio_only':
                 download_opts.update({
-                    'format': 'bestaudio/best',
-                    'outtmpl': f'outputs/{unique_id}_%(title)s.%(ext)s',
+                    'format': 'bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio/best',
+                    'outtmpl': os.path.join(temp_dir, f'{unique_id}_%(title)s.%(ext)s'),
                     'postprocessors': [{
                         'key': 'FFmpegExtractAudio',
                         'preferredcodec': 'mp3',
-                        'preferredquality': '192',
+                        'preferredquality': '320',  # ✅ HIGHEST AUDIO QUALITY
                     }],
                     'prefer_ffmpeg': True,
                 })
             elif format_id and format_id != 'best':
                 download_opts.update({
                     'format': format_id,
-                    'outtmpl': f'outputs/{unique_id}_%(title)s.%(ext)s'
+                    'outtmpl': os.path.join(temp_dir, f'{unique_id}_%(title)s.%(ext)s')
                 })
             else:
+                # ✅ PRIORITIZE HIGHEST QUALITY VIDEO WITH AUDIO
                 download_opts.update({
-                    'format': 'best[height>=720][acodec!=none]/best[height>=480][acodec!=none]/best[acodec!=none]/best',
-                    'outtmpl': f'outputs/{unique_id}_%(title)s.%(ext)s'
+                    'format': (
+                        'best[height>=1080][acodec!=none]/best[height>=720][acodec!=none]/'
+                        'best[height>=480][acodec!=none]/best[acodec!=none]/'
+                        'bestvideo[height>=1080]+bestaudio/bestvideo[height>=720]+bestaudio/'
+                        'bestvideo+bestaudio/best'
+                    ),
+                    'outtmpl': os.path.join(temp_dir, f'{unique_id}_%(title)s.%(ext)s'),
+                    'merge_output_format': 'mp4',  # ✅ ENSURE MP4 OUTPUT
                 })
-            
+                    
             def progress_hook(d):
                 try:
                     if d['status'] == 'downloading':
@@ -236,11 +241,11 @@ class InstagramDownloader:
                                 progress = float(percent_str)
                             except:
                                 progress = 50
-                        
+                                            
                         with job_lock:
                             if job_id in download_jobs:
                                 download_jobs[job_id]['progress'] = min(progress, 95)
-                    
+                                    
                     elif d['status'] == 'finished':
                         with job_lock:
                             if job_id in download_jobs:
@@ -248,76 +253,101 @@ class InstagramDownloader:
                                 download_jobs[job_id]['status'] = 'processing'
                 except Exception:
                     pass
-            
+                    
             download_opts['progress_hooks'] = [progress_hook]
-            
+                    
             with yt_dlp.YoutubeDL(download_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
-                
-                temp_filename = ydl.prepare_filename(info)
-                
-                if format_id == 'audio_only':
-                    base_name = os.path.splitext(temp_filename)[0]
-                    temp_filename = base_name + '.mp3'
-                
+            
+                # Find the downloaded file
+                downloaded_files = glob.glob(os.path.join(temp_dir, f'{unique_id}_*'))
+                if not downloaded_files:
+                    raise Exception("No files were downloaded")
+            
+                file_path = downloaded_files[0]
+            
+                if not os.path.exists(file_path):
+                    raise Exception("Downloaded file not found")
+                            
+                file_size = os.path.getsize(file_path)
                 title = info.get('title', 'Instagram Content')
                 ext = 'mp3' if format_id == 'audio_only' else info.get('ext', 'mp4')
+            
+                # ✅ REGISTER FOR AUTO-CLEANUP
+                cleanup_time = datetime.now() + timedelta(minutes=5)  # Auto-delete after 5 minutes
+                with temp_files_lock:
+                    temp_files[job_id] = {
+                        'file_path': file_path,
+                        'temp_dir': temp_dir,
+                        'cleanup_time': cleanup_time,
+                        'filename': os.path.basename(file_path)
+                    }
+                            
+                with job_lock:
+                    if job_id in download_jobs:
+                        download_jobs[job_id].update({
+                            'status': 'completed',
+                            'progress': 100,
+                            'file_path': file_path,
+                            'filename': os.path.basename(file_path),
+                            'file_size': file_size,
+                            'temp_dir': temp_dir,
+                            'info': {
+                                'title': title,
+                                'duration': info.get('duration'),
+                                'uploader': info.get('uploader'),
+                                'quality': info.get('height', 'Unknown'),
+                                'format': info.get('format', 'Unknown')
+                            }
+                        })
                 
-                final_filename = self.get_unique_filename('outputs', title, ext)
-                new_path = os.path.join('outputs', final_filename)
-                
-                # Wait and rename file
-                for attempt in range(60):
-                    if os.path.exists(temp_filename):
-                        try:
-                            if os.path.exists(new_path):
-                                os.remove(new_path)
-                            os.rename(temp_filename, new_path)
-                            break
-                        except OSError:
-                            if attempt == 59:
-                                with job_lock:
-                                    if job_id in download_jobs:
-                                        download_jobs[job_id].update({
-                                            'status': 'failed',
-                                            'error': 'File processing error'
-                                        })
-                                return
-                    time.sleep(0.5)
-                
-                if os.path.exists(new_path):
-                    file_size = os.path.getsize(new_path)
-                    
-                    with job_lock:
-                        if job_id in download_jobs:
-                            download_jobs[job_id].update({
-                                'status': 'completed',
-                                'progress': 100,
-                                'file_path': new_path,
-                                'filename': final_filename,
-                                'file_size': file_size,
-                                'download_url': f"/video/{final_filename}",
-                                'info': {
-                                    'title': title,
-                                    'duration': info.get('duration'),
-                                    'uploader': info.get('uploader')
-                                }
-                            })
-                else:
-                    with job_lock:
-                        if job_id in download_jobs:
-                            download_jobs[job_id].update({
-                                'status': 'failed',
-                                'error': 'File not found after download'
-                            })
-        
+                return file_path
+                            
         except Exception as e:
+            # ✅ CLEANUP ON ERROR
+            if temp_dir and os.path.exists(temp_dir):
+                try:
+                    shutil.rmtree(temp_dir)
+                except:
+                    pass
+                        
             with job_lock:
                 if job_id in download_jobs:
                     download_jobs[job_id].update({
                         'status': 'failed',
                         'error': f'Download failed: {str(e)}'
                     })
+            return None
+
+# ✅ AUTO-CLEANUP BACKGROUND TASK
+async def cleanup_temp_files():
+    """Background task to clean up temporary files"""
+    while True:
+        try:
+            current_time = datetime.now()
+            files_to_cleanup = []
+            
+            with temp_files_lock:
+                for job_id, file_info in temp_files.items():
+                    if current_time > file_info['cleanup_time']:
+                        files_to_cleanup.append(job_id)
+            
+            for job_id in files_to_cleanup:
+                with temp_files_lock:
+                    if job_id in temp_files:
+                        file_info = temp_files[job_id]
+                        try:
+                            if os.path.exists(file_info['temp_dir']):
+                                shutil.rmtree(file_info['temp_dir'])
+                        except Exception as e:
+                            print(f"Cleanup error for {job_id}: {e}")
+                        finally:
+                            del temp_files[job_id]
+            
+            await asyncio.sleep(60)  # Check every minute
+        except Exception as e:
+            print(f"Cleanup task error: {e}")
+            await asyncio.sleep(60)
 
 # Async wrappers
 async def extract_info_async(url, content_type=None):
@@ -326,18 +356,22 @@ async def extract_info_async(url, content_type=None):
 
 async def download_video_async(url, format_id, job_id, content_type=None):
     loop = asyncio.get_event_loop()
-    await loop.run_in_executor(executor, downloader.download_video, url, format_id, job_id, content_type)
+    await loop.run_in_executor(executor, downloader.download_video_to_temp, url, format_id, job_id, content_type)
 
 downloader = InstagramDownloader()
+
+@app.on_event("startup")
+async def startup_event():
+    """Start background cleanup task"""
+    asyncio.create_task(cleanup_temp_files())
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-# ✅ MAIN EXTRACT ENDPOINT - COMPLETELY FIXED
 @app.post("/extract")
 async def extract_video_info(request_data: URLRequest):
-    """Extract video information - Complete fix"""
+    """Extract video information - High Quality Focus"""
     try:
         url = request_data.url.strip()
         content_type = request_data.content_type
@@ -366,7 +400,7 @@ async def extract_video_info(request_data: URLRequest):
         if not content_type:
             content_type = downloader.detect_content_type(url)
         
-        # ✅ STORIES HANDLING - Return success=false with details
+        # ✅ STORIES HANDLING
         if content_type == 'story':
             return JSONResponse(
                 status_code=200,
@@ -408,30 +442,57 @@ async def extract_video_info(request_data: URLRequest):
         
         info = result['data']
         
-        # Process formats
+        # ✅ ENHANCED FORMAT PROCESSING FOR HIGHEST QUALITY
         formats = []
-        
+
         if 'formats' in info and info['formats']:
+            # Filter and sort for highest quality video formats
             video_formats = []
             
             for fmt in info['formats']:
                 if (fmt.get('vcodec') != 'none' and 
                     fmt.get('acodec') != 'none' and 
                     fmt.get('height') and fmt.get('width')):
+                    
+                    # ✅ SAFE QUALITY SCORE CALCULATION WITH NONE CHECKS
+                    height = fmt.get('height') or 0
+                    width = fmt.get('width') or 0
+                    tbr = fmt.get('tbr') or 0
+                    
+                    # Ensure all values are numbers
+                    try:
+                        height = int(height) if height else 0
+                        width = int(width) if width else 0
+                        tbr = float(tbr) if tbr else 0
+                    except (ValueError, TypeError):
+                        height = width = tbr = 0
+                    
+                    quality_score = (height * width) + (tbr * 1000)
+                    fmt['quality_score'] = quality_score
                     video_formats.append(fmt)
             
-            video_formats.sort(key=lambda x: x.get('height', 0) * x.get('width', 0), reverse=True)
+            # Sort by quality score (highest first)
+            video_formats.sort(key=lambda x: x.get('quality_score', 0), reverse=True)
             
-            seen_qualities = set()
+            # Select top quality formats
+            seen_heights = set()
             for fmt in video_formats:
-                height = fmt.get('height', 0)
-                if height and height not in seen_qualities and len(formats) < 3:
-                    seen_qualities.add(height)
+                height = fmt.get('height') or 0
+                try:
+                    height = int(height) if height else 0
+                except (ValueError, TypeError):
+                    height = 0
                     
+                if height and height not in seen_heights and len(formats) < 4:
+                    seen_heights.add(height)
+                    
+                    # ✅ ENHANCED QUALITY LABELS
                     if height >= 1080:
-                        quality_label = f"High Quality ({height}p)"
+                        quality_label = f"Ultra HD ({height}p) - Best Quality"
                     elif height >= 720:
-                        quality_label = f"HD ({height}p)"
+                        quality_label = f"Full HD ({height}p) - High Quality"
+                    elif height >= 480:
+                        quality_label = f"HD ({height}p) - Good Quality"
                     else:
                         quality_label = f"Standard ({height}p)"
                     
@@ -442,14 +503,16 @@ async def extract_video_info(request_data: URLRequest):
                         'filesize': fmt.get('filesize'),
                         'width': fmt.get('width'),
                         'height': fmt.get('height'),
+                        'tbr': fmt.get('tbr'),
                         'type': 'video'
                     })
         
+        # ✅ ALWAYS ADD BEST QUALITY OPTION
         if not formats:
             formats.append({
                 'format_id': 'best',
                 'ext': 'mp4',
-                'quality': 'Best Available Quality',
+                'quality': 'Highest Available Quality (Auto)',
                 'type': 'video'
             })
         
@@ -457,7 +520,7 @@ async def extract_video_info(request_data: URLRequest):
         formats.append({
             'format_id': 'audio_only',
             'ext': 'mp3',
-            'quality': 'Audio Only (MP3)',
+            'quality': 'Audio Only (320kbps MP3)',
             'type': 'audio'
         })
         
@@ -483,7 +546,8 @@ async def extract_video_info(request_data: URLRequest):
                 'success': True,
                 'session_id': session_id,
                 'video_info': video_cache[session_id]['info'],
-                'content_type': content_type
+                'content_type': content_type,
+                'quality_note': 'All downloads are optimized for highest available quality'
             }
         )
         
@@ -552,7 +616,7 @@ async def download_video_endpoint(request_data: DownloadRequest, background_task
             content={
                 'success': True,
                 'job_id': job_id,
-                'message': f'Download started for Instagram {content_type}'
+                'message': f'High-quality download started for Instagram {content_type}'
             }
         )
         
@@ -581,46 +645,95 @@ async def get_download_status(job_id: str):
             )
         
         job_data = download_jobs[job_id].copy()
-    
-    return JSONResponse(
-        status_code=200,
-        content={
-            'success': True,
-            'job_id': job_id,
-            **job_data
-        }
-    )
+        
+        # Add download URL if completed
+        if job_data['status'] == 'completed':
+            job_data['download_url'] = f"/download-file/{job_id}"
+        
+        return JSONResponse(
+            status_code=200,
+            content={
+                'success': True,
+                'job_id': job_id,
+                **job_data
+            }
+        )
 
-@app.get("/video/{filename}")
-async def serve_video(filename: str):
-    """Serve video files"""
+@app.get("/download-file/{job_id}")
+async def download_file(job_id: str):
+    """✅ STREAM FILE AND AUTO-DELETE"""
     try:
-        file_path = os.path.join('outputs', filename)
+        with temp_files_lock:
+            if job_id not in temp_files:
+                raise HTTPException(status_code=404, detail="File not found or expired")
+            
+            file_info = temp_files[job_id]
+            file_path = file_info['file_path']
+            filename = file_info['filename']
+        
         if not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail="File not found")
         
-        return FileResponse(
-            file_path,
+        # ✅ STREAM FILE CONTENT
+        def file_generator():
+            try:
+                with open(file_path, 'rb') as file:
+                    while chunk := file.read(8192):  # 8KB chunks
+                        yield chunk
+            finally:
+                # ✅ IMMEDIATE CLEANUP AFTER STREAMING
+                try:
+                    if os.path.exists(file_info['temp_dir']):
+                        shutil.rmtree(file_info['temp_dir'])
+                    with temp_files_lock:
+                        if job_id in temp_files:
+                            del temp_files[job_id]
+                except Exception as cleanup_error:
+                    print(f"Cleanup error: {cleanup_error}")
+        
+        # Determine content type
+        content_type = "video/mp4"
+        if filename.endswith('.mp3'):
+            content_type = "audio/mpeg"
+        elif filename.endswith('.webm'):
+            content_type = "video/webm"
+        
+        return StreamingResponse(
+            file_generator(),
+            media_type=content_type,
             headers={
+                "Content-Disposition": f"attachment; filename={filename}",
                 "Access-Control-Allow-Origin": "*",
                 "Access-Control-Allow-Methods": "GET",
                 "Access-Control-Allow-Headers": "*",
             }
         )
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error serving file: {str(e)}")
 
 @app.get("/health")
 async def health_check():
-    """Health check"""
+    """Health check with cleanup info"""
+    with temp_files_lock:
+        temp_files_count = len(temp_files)
+    
     return JSONResponse(
         status_code=200,
         content={
             'status': 'OK',
-            'message': 'Instagram Downloader API - Complete Fix',
+            'message': 'Instagram Downloader API - High Quality & Auto Cleanup',
+            'features': [
+                'Highest quality video downloads',
+                'Automatic file cleanup (5 min)',
+                'No permanent storage',
+                'Streaming downloads'
+            ],
             'supported_content': ['posts', 'reels', 'igtv'],
             'not_supported': ['stories'],
-            'active_downloads': len(download_jobs)
+            'active_downloads': len(download_jobs),
+            'temp_files': temp_files_count,
+            'quality_priority': 'Ultra HD (1080p+) > Full HD (720p) > HD (480p)'
         }
     )
 

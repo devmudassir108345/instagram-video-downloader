@@ -4,15 +4,26 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Instagram Video Downloader</title>
+
+    <script>
+      (function () {
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme) {
+          document.documentElement.setAttribute("data-theme", savedTheme);
+        } else {
+          document.documentElement.setAttribute("data-theme", "light");
+        }
+      })();
+    </script>
+
     <link rel="stylesheet" href="/static/main.css" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Geologica:wght@100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Quicksand:wght@300..700&display=swap"
       rel="stylesheet"
     />
-
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
@@ -21,31 +32,65 @@
       referrerpolicy="no-referrer"
     />
   </head>
+
   <body>
     <header class="header">
-      <div class="container">
+      <div class="container-lg">
         <div class="header__container">
           <div class="header__logo">
-            <a href="/">my logo </a>
+            <a href="/">
+              <h1>loader.<span>fo</span></h1>
+            </a>
           </div>
-          <div class="header__links"></div>
+          <div class="header__links">
+            <ul>
+              <li><a href="#">Link 1</a></li>
+              <li><a href="#">Link 2</a></li>
+              <li><a href="#">Link 3</a></li>
+            </ul>
+          </div>
+          <div class="header__toggle">
+            <button id="theme-toggle" class="toggle-btn">Toggle Theme</button>
+          </div>
         </div>
       </div>
     </header>
 
     <div class="container">
       <!-- Header -->
-      <header class="header">
-        <div class="logo">
-          <i class="fab fa-instagram"></i>
-          <h1>Instagram Downloader</h1>
+      <section class="section--hero">
+        <div class="hero">
+          <div class="hero__icons">
+            <div class="hero__icon hero__star">
+              <i class="fa-solid fa-star"></i>
+            </div>
+            <div class="hero__icon hero__music">
+              <i class="fa-solid fa-music"></i>
+            </div>
+            <div class="hero__icon hero__video">
+              <i class="fa-solid fa-video"></i>
+            </div>
+            <div class="hero__icon hero__insta">
+              <i class="fa-brands fa-instagram"></i>
+            </div>
+          </div>
+          <div class="hero__container">
+            <div class="hero__title">
+              <h1>instaGram video downloader</h1>
+              <div class="hero__img">
+                <img src="/images/wave.png" alt="" />
+              </div>
+            </div>
+            <div class="hero__subtitle">
+              <h2>
+                try this unique tool for quick, hassle-free downloads from
+                Instagram. Transform your offline video collection with this
+                reliable and efficient downloader.
+              </h2>
+            </div>
+          </div>
         </div>
-        <p class="subtitle">
-          Download Instagram videos, reels & IGTV in high quality • Fast &
-          Concurrent
-        </p>
-      </header>
-
+      </section>
       <!-- Main Content -->
       <main class="main-content">
         <!-- URL Input Section -->
@@ -54,7 +99,7 @@
             <input
               type="url"
               id="videoUrl"
-              placeholder="Paste Instagram video URL here..."
+              placeholder="https://www.instagram.com/reels/DL6ED1OohUA"
               class="url-input"
               required
             />
@@ -62,13 +107,6 @@
               <i class="fas fa-search"></i>
               <span>Extract Info</span>
             </button>
-          </div>
-          <div class="url-examples">
-            <p>Supported formats:</p>
-            <span>instagram.com/p/...</span>
-            <span>instagram.com/reel/...</span>
-            <span>instagram.com/tv/...</span>
-            <span>instagram.com/stories/...</span>
           </div>
         </section>
 
@@ -288,21 +326,305 @@
           </div>
         </section>
       </main>
-
-      <!-- Footer -->
-      <footer class="footer">
-        <p>
-          &copy; 2024 Instagram Downloader. Built with FastAPI & yt-dlp • Async
-          & Concurrent
-        </p>
-        <div class="footer-links">
-          <a href="#"><i class="fas fa-info-circle"></i> About</a>
-          <a href="#"><i class="fas fa-shield-alt"></i> Privacy</a>
-          <a href="#"><i class="fas fa-envelope"></i> Contact</a>
-        </div>
-      </footer>
     </div>
 
+    <section class="section--note">
+      <div class="container-lg">
+        <div class="note">
+          <div class="container">
+            <p>we do not allow/support the download of copyright material !</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section--about">
+      <div class="about">
+        <div class="container">
+          <div class="about__content">
+            <div class="about__title">
+              <h1>what is loader.fo</h1>
+              <div class="about__img">
+                <img src="/images/wave.png" alt="" />
+              </div>
+            </div>
+            <div class="about__text">
+              <p>
+                loader.fo is one of the most popular downloader tools on the
+                internet. With this tool, you can download and convert videos
+                from almost anywhere on the internet, from YouTube, Twitter, and
+                Facebook to OK.ru, TikTok, and everything in between.
+                Functionality-wise, it’s very straightforward. The user is
+                required to enter the page URL in the "URL" field, choose the
+                format, and click download.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="container-lg">
+          <div class="about__container">
+            <div class="about__col">
+              <div class="about__heading">
+                <h3>
+                  Experience Buffer-Free Entertainment With YouTube Video
+                  Downloader
+                </h3>
+              </div>
+              <div class="about__col-text">
+                <p>
+                  The YouTube Video Downloader promises uninterrupted
+                  entertainment and a buffer-free experience for your favorite
+                  YouTube content. This user-friendly tool helps you to download
+                  videos effortlessly, eliminating the frustration of buffering.
+                </p>
+              </div>
+            </div>
+            <div class="about__col about__col-2">
+              <div class="about__heading">
+                <h3>Your One-Stop Solution to YouTube Video Downloading</h3>
+              </div>
+              <div class="about__col-text">
+                <p>
+                  Tired of those annoying buffering pauses ruining your YouTube
+                  binge? Well, say hello to uninterrupted entertainment with
+                  loader.fo! This nifty tool not only lets you download your
+                  favorite YouTube videos for free but also helps bid goodbye to
+                  those dreaded buffering intervals. Imagine a world where your
+                  videos load instantly, without any interruptions. That’s the
+                  magic of loader.fo. like having a premium pass to buffer-free
+                  streaming – just the way entertainment should be. And the best
+                  part? It won’t cost you a dime.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section--faq">
+      <div class="faq">
+        <div class="container-lg">
+          <div class="faq__heading">
+            <span>faq</span>
+            <h1>frequently asked questions</h1>
+            <div class="faq__img">
+              <img src="/images/wave.png" alt="border bottom wave" />
+            </div>
+          </div>
+
+          <div class="faq__container">
+            <div class="faq__col">
+              <div class="faq__col-title">
+                <h3>instagram downloader : FAQs</h3>
+              </div>
+
+              <div class="accordion">
+                <div class="accordion-item">
+                  <div class="accordion-header">
+                    Are there any subscription plans, or is it a one-time
+                    purchase?
+                    <div class="accordion-arrow">
+                      <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                  </div>
+                  <div class="accordion-content">
+                    <div class="accordion-inner">
+                      Lorem ipsum dolor sit, amet consectetur adipisicing elit.
+                      Neque nisi dolore iure, eligendi ab magnam, omnis,
+                      obcaecati reiciendis voluptate beatae explicabo suscipit
+                      veritatis iste temporibus doloribus voluptatum sint
+                      commodi molestiae.
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item">
+                  <div class="accordion-header">
+                    Can the downloader be used without providing personal
+                    information?
+                    <div class="accordion-arrow">
+                      <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                  </div>
+                  <div class="accordion-content">
+                    <div class="accordion-inner">
+                       Lorem ipsum dolor sit, amet consectetur adipisicing elit.
+                      Neque nisi dolore iure, eligendi ab magnam, omnis,
+                      obcaecati reiciendis voluptate beatae explicabo suscipit
+                      veritatis iste temporibus doloribus voluptatum sint
+                      commodi molestiae.
+                    </div>
+                  </div>
+                </div>
+                <div class="accordion-item">
+                  <div class="accordion-header">
+                    Can the downloader be used without providing personal
+                    information?
+                    <div class="accordion-arrow">
+                      <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                  </div>
+                  <div class="accordion-content">
+                    <div class="accordion-inner">
+                       Lorem ipsum dolor sit, amet consectetur adipisicing elit.
+                      Neque nisi dolore iure, eligendi ab magnam, omnis,
+                      obcaecati reiciendis voluptate beatae explicabo suscipit
+                      veritatis iste temporibus doloribus voluptatum sint
+                      commodi molestiae.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="faq__col">
+              <div class="faq__col-title">
+                <h3>loader.fo : FAQs</h3>
+              </div>
+              <div class="accordion">
+                <div class="accordion-item">
+                  <div class="accordion-header">
+                    Are there any subscription plans, or is it a one-time
+                    purchase?
+                    <div class="accordion-arrow">
+                      <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                  </div>
+                  <div class="accordion-content">
+                    <div class="accordion-inner">
+                       Lorem ipsum dolor sit, amet consectetur adipisicing elit.
+                      Neque nisi dolore iure, eligendi ab magnam, omnis,
+                      obcaecati reiciendis voluptate beatae explicabo suscipit
+                      veritatis iste temporibus doloribus voluptatum sint
+                      commodi molestiae.
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item">
+                  <div class="accordion-header">
+                    Can the downloader be used without providing personal
+                    information?
+                    <div class="accordion-arrow">
+                      <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                  </div>
+                  <div class="accordion-content">
+                    <div class="accordion-inner">
+                       Lorem ipsum dolor sit, amet consectetur adipisicing elit.
+                      Neque nisi dolore iure, eligendi ab magnam, omnis,
+                      obcaecati reiciendis voluptate beatae explicabo suscipit
+                      veritatis iste temporibus doloribus voluptatum sint
+                      commodi molestiae.
+                    </div>
+                  </div>
+                </div>
+                <div class="accordion-item">
+                  <div class="accordion-header">
+                    Can the downloader be used without providing personal
+                    information?
+                    <div class="accordion-arrow">
+                      <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                  </div>
+                  <div class="accordion-content">
+                    <div class="accordion-inner">
+                       Lorem ipsum dolor sit, amet consectetur adipisicing elit.
+                      Neque nisi dolore iure, eligendi ab magnam, omnis,
+                      obcaecati reiciendis voluptate beatae explicabo suscipit
+                      veritatis iste temporibus doloribus voluptatum sint
+                      commodi molestiae.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>
+        &copy; 2024 Instagram Downloader. Built with FastAPI & yt-dlp • Async &
+        Concurrent
+      </p>
+      <div class="footer-links">
+        <a href="#"><i class="fas fa-info-circle"></i> About</a>
+        <a href="#"><i class="fas fa-shield-alt"></i> Privacy</a>
+        <a href="#"><i class="fas fa-envelope"></i> Contact</a>
+      </div>
+    </footer>
+
     <script src="/static/script.js"></script>
+    <script>
+      // Get toggle button
+      const toggleBtn = document.getElementById("theme-toggle");
+
+      // Load saved theme from localStorage
+      const savedTheme = localStorage.getItem("theme");
+
+      // Apply saved theme if exists
+      if (savedTheme) {
+        document.documentElement.setAttribute("data-theme", savedTheme);
+      } else {
+        // Default theme
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+
+      // Toggle theme on button click
+      toggleBtn.addEventListener("click", () => {
+        const currentTheme =
+          document.documentElement.getAttribute("data-theme");
+        const newTheme = currentTheme === "light" ? "dark" : "light";
+        document.documentElement.setAttribute("data-theme", newTheme);
+        localStorage.setItem("theme", newTheme); // Save theme in localStorage
+      });
+    </script>
+
+    <script>
+      function initAccordion(scope) {
+        const items = scope.querySelectorAll(".accordion-item");
+
+        items.forEach((item) => {
+          const header = item.querySelector(".accordion-header");
+          const content = item.querySelector(".accordion-content");
+          const inner = item.querySelector(".accordion-inner");
+          const arrow = item.querySelector(".accordion-arrow");
+
+          header.addEventListener("click", () => {
+            const isOpen =
+              content.style.height && content.style.height !== "0px";
+
+            items.forEach((i) => {
+              i.querySelector(".accordion-content").style.height = 0;
+              i.querySelector(".accordion-arrow").classList.remove("rotate");
+            });
+
+            if (!isOpen) {
+              content.style.height = inner.scrollHeight + "px";
+              arrow.classList.add("rotate");
+            }
+          });
+        });
+
+        window.addEventListener("resize", () => {
+          items.forEach((item) => {
+            const content = item.querySelector(".accordion-content");
+            const inner = item.querySelector(".accordion-inner");
+            const isOpen =
+              content.style.height && content.style.height !== "0px";
+            if (isOpen) {
+              content.style.height = inner.scrollHeight + "px";
+            }
+          });
+        });
+      }
+
+      document
+        .querySelectorAll(".accordion")
+        .forEach((acc) => initAccordion(acc));
+    </script>
   </body>
 </html>
